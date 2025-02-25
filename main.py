@@ -15,7 +15,7 @@ import numpy as np
 import math
 
 window_dimensions = (640, 640)  # A tuple for the window dimensions
-name = b'Hello World!'
+name = 'Hello World!'
 
 def main():
     # Create the initial window
@@ -49,13 +49,14 @@ def init():
     # pygame setup
     pygame.init()
     screen = pygame.display.set_mode(window_dimensions, pygame.DOUBLEBUF|pygame.OPENGL)
+    pygame.display.set_caption(name)
     clock = pygame.time.Clock()
     running = True
 
     # basic OpenGL setup
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    # glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0)
+    glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0)
 
     # configure shaders
     vertex_shader_source = ''
@@ -79,19 +80,25 @@ def init():
     glAttachShader(program, fragment_shader)
 
     glLinkProgram(program)
-    glUseProgram(program) # why is this not working?
+    glUseProgram(program) # note: this line will fail if shaders do not compile
+    
+    # uniforms
+    global proj_loc, modelview_loc
+
+    proj_loc = glGetUniformLocation(program, "projectionMatrix")
+    modelview_loc = glGetUniformLocation(program, "modelviewMatrix")
+
+    # intialize vertex array object
+    global vao
+    vao = glGenVertexArrays(1)
+    glBindVertexArray(vao)
 
     # initialize vertex buffer
-
     # construct array for VBO, must be set to float32 for OpenGL
     vertices = np.array([
         0.5, 1, 0.0,
         math.sin(2 * math.pi / 3) / 2 + 0.5, math.cos(2 * math.pi / 3) / 2 + 0.5, 0.0,
         math.sin(-2 * math.pi / 3) / 2 + 0.5, math.cos(-2 * math.pi / 3) / 2 + 0.5, 0.0,
-        # 0.25, 0.25, 0.0,
-        # 0.75, 0.25, 0.0,
-        # 0.75, 0.75, 0.0,
-        # 0.25, 0.75, 0.0,
     ], dtype='float32')
 
     # allocate a buffer object reference (will be an integer)
@@ -111,7 +118,6 @@ def init():
         1.0, 0.0, 0.0, 1.0,
         0.0, 1.0, 0.0, 1.0,
         0.0, 0.0, 1.0, 1.0,
-        # 1.0, 1.0, 1.0, 1.0,
     ], dtype='float32')
 
     # allocate a buffer object reference (will be an integer)
@@ -126,17 +132,18 @@ def init():
     # enable vertex array
     glEnableVertexAttribArray(1)
 
-    # uniforms
-    global proj_loc, modelview_loc
-
-    proj_loc = glGetUniformLocation(program, "projectionMatrix")
-    modelview_loc = glGetUniformLocation(program, "modelviewMatrix")
+    # unbind vertex buffer and array objects
+    glBindBuffer(GL_ARRAY_BUFFER, 0)
+    glBindVertexArray(0)
 
 # Callback function used to display the scene
 # Currently it just draws a simple polyline (LINE_STRIP)
 def display():
     glClearColor(0.0, 0.0, 0.0, 0.0)
     glClear(GL_COLOR_BUFFER_BIT)
+
+    # rebind the vao
+    glBindVertexArray(vao)
 
     # access current transformation matrices
     proj_mat = glGetFloatv(GL_PROJECTION_MATRIX)
@@ -152,6 +159,9 @@ def display():
 
     # drawing vertices
     glDrawArrays(GL_TRIANGLE_FAN, 0, 3)
+
+    # unbind the vao
+    glBindVertexArray(vao)
 
     # perform rotation from center of screen
     #   rotation of 1 degree every frame
