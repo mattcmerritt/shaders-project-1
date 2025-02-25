@@ -201,8 +201,12 @@ def init():
 # Callback function used to display the scene
 # Currently it just draws a simple polyline (LINE_STRIP)
 def display():
+    # Use depth test to only accept fragment if it closer to the camera
+    glEnable(GL_DEPTH_TEST)
+    glDepthFunc(GL_LESS)
+
     glClearColor(0.0, 0.0, 0.0, 0.0)
-    glClear(GL_COLOR_BUFFER_BIT)
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     # rebind the vao
     glBindVertexArray(vao)
