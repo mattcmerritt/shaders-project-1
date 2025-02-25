@@ -9,13 +9,15 @@
 #==============================
 
 import sys
+import copy
 import pygame
 from OpenGL.GL import *
 import numpy as np
 import math
 from camera import *
 from utils import *
-import copy
+from rendered_object import RenderedObject
+from cube import Cube
 
 camera_angle = 60.0
 camera_start_position = Point(0.0, 0.0, 5.0)
@@ -23,19 +25,7 @@ window_dimensions = (640, 640)  # A tuple for the window dimensions
 name = '3D Color Test'
 
 # CONSTANTS FOR CUBES
-# construct array for VBO, must be set to float32 for OpenGL
-vertices = np.array([
-    -1.0, -1.0, -1.0,   # left, bottom, front
-    -1.0, -1.0, 1.0,    # left, bottom, back
-    -1.0, 1.0, -1.0,    # left, top, front
-    -1.0, 1.0, 1.0,     # left, top, back
-    1.0, -1.0, -1.0,    # right, bottom, front
-    1.0, -1.0, 1.0,     # right, bottom, back
-    1.0, 1.0, -1.0,     # right, top, front
-    1.0, 1.0, 1.0,      # right, top, back
-], dtype='float32')
-
-# construct array for VBO, must be set to float32 for OpenGL
+# original color variant
 colors = np.array([
     1.0, 0.0, 0.0, 1.0, # left, bottom, front
     0.0, 1.0, 0.0, 1.0, # left, bottom, back
@@ -47,11 +37,16 @@ colors = np.array([
     0.2, 0.2, 0.2, 1.0, # right, top, back
 ], dtype='float32')
 
-indices = np.array([
-    0, 1, 2, 3, 6, 7, 4, 5,     # first triangle strip
-    0xFFFF,                     # start second triangle strip
-    2, 6, 0, 4, 1, 5, 3, 7,     # second triangle strip
-], dtype='uint16')
+old_colors = np.array([
+    1.0, 0.0, 0.0, 1.0, # left, bottom, front
+    0.0, 1.0, 0.0, 1.0, # left, bottom, back
+    0.0, 0.0, 1.0, 1.0, # left, top, front
+    1.0, 1.0, 1.0, 1.0, # left, top, back
+    1.0, 1.0, 1.0, 1.0, # right, bottom, front
+    0.0, 0.0, 1.0, 1.0, # right, bottom, back
+    0.0, 1.0, 0.0, 1.0, # right, top, front
+    1.0, 0.0, 0.0, 1.0, # right, top, back
+], dtype='float32')
 
 def main():
     # Create the initial window
@@ -134,7 +129,7 @@ def init():
     glAttachShader(program, fragment_shader)
 
     glLinkProgram(program)
-    glUseProgram(program) # note: this line will fail if shaders do not compile
+    glUseProgram(program) # NOTE: this line will fail if shaders do not compile
     
     # uniforms
     global proj_loc, modelview_loc
@@ -142,104 +137,48 @@ def init():
     proj_loc = glGetUniformLocation(program, "projectionMatrix")
     modelview_loc = glGetUniformLocation(program, "modelviewMatrix")
 
-    # intialize vertex array object (VAO)
-    global vao
-    vao = glGenVertexArrays(1)
-    glBindVertexArray(vao)
+    # pass uniform locations to rendered object parent class
+    RenderedObject.proj_loc = proj_loc
+    RenderedObject.modelview_loc = modelview_loc
 
-    # initialize element array buffer (EBO)
-    ebo = glGenBuffers(1)
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo)
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, len(indices) * 16, indices, GL_STATIC_DRAW)
+    # construct cubes
+    global original_cube, new_cube
+    original_cube = Cube(colors)
+    new_cube = Cube(old_colors)
 
-    # initialize all VBOs
-    # vertex buffer for positions
-    # allocate a buffer object reference (will be an integer)
-    vert_vbo = glGenBuffers(1)
-    # specify the buffer to work with
-    glBindBuffer(GL_ARRAY_BUFFER, vert_vbo)
-    # populate the data of the buffer
-    glBufferData(GL_ARRAY_BUFFER, len(vertices) * 32, vertices, GL_STATIC_DRAW)
-    # set the vertex pointer for the shader
-    # note: 3 is the number of coordinates given in each vertex
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, None)
-    # enable vertex array
-    glEnableVertexAttribArray(0)
-
-    # vertex buffer for colors
-    # allocate a buffer object reference (will be an integer)
-    color_vbo = glGenBuffers(1)
-    # specify the buffer to work with
-    glBindBuffer(GL_ARRAY_BUFFER, color_vbo)
-    # populate the data of the buffer
-    glBufferData(GL_ARRAY_BUFFER, len(colors) * 32, colors, GL_STATIC_DRAW)
-    # set the vertex pointer for the shader
-    # note: 4 is the number of coordinates given in each vertex
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, None)
-    # enable vertex array
-    glEnableVertexAttribArray(1)
-
-    # TODO: remove debug
-    # print(f'VAO {vao}, EBO {ebo}, pVBO {vert_vbo}, cVBO {color_vbo}')
-    # bound_vao = glGetIntegerv(GL_VERTEX_ARRAY_BINDING)
-    # bound_buffer = glGetIntegerv(GL_ARRAY_BUFFER_BINDING)
-    # bound_element_buffer = glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING)
-    # print(f'Currently bound VAO: {bound_vao}, current buffers: {bound_buffer}, current element buffer: {bound_element_buffer}')
-
-    # unbind all objects
-    # IMPORTANT: unbind VAO first to prevent detaching buffers
-    glBindVertexArray(0)
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
-    glBindBuffer(GL_ARRAY_BUFFER, 0)
-
-    # TODO: remove debug
-    # bound_vao = glGetIntegerv(GL_VERTEX_ARRAY_BINDING)
-    # bound_buffer = glGetIntegerv(GL_ARRAY_BUFFER_BINDING)
-    # bound_element_buffer = glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING)
-    # print(f'Currently bound VAO: {bound_vao}, current buffers: {bound_buffer}, current element buffer: {bound_element_buffer}')
-
-# Callback function used to display the scene
-# Currently it just draws a simple polyline (LINE_STRIP)
-def display():
-    # Use depth test to only accept fragment if it closer to the camera
-    glEnable(GL_DEPTH_TEST)
-    glDepthFunc(GL_LESS)
-
-    glClearColor(0.0, 0.0, 0.0, 0.0)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-    # rebind the vao
-    glBindVertexArray(vao)
-
-    # enable primitive restart
+    # enable primitive restart 
+    #   necessary for objects with multiple geometries in one VAO
     glEnable(GL_PRIMITIVE_RESTART)
     glPrimitiveRestartIndex(0xFFFF)
 
-    # access current transformation matrices
-    proj_mat = glGetFloatv(GL_PROJECTION_MATRIX)
-    modelview_mat = glGetFloatv(GL_MODELVIEW_MATRIX)
+    # use depth test to only accept fragment if it is closer to the camera
+    glEnable(GL_DEPTH_TEST)
+    glDepthFunc(GL_LESS)
 
-    # flatten the matrices to arrays
-    flat_proj_mat = np.array(proj_mat).flatten()
-    flat_modelview_mat = np.array(modelview_mat).flatten()
-
-    # load matrix values into uniforms for shader
-    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, flat_proj_mat)
-    glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, flat_modelview_mat)
+# Callback function used to display the scene
+def display():
+    glClearColor(0.0, 0.0, 0.0, 0.0)
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     # place camera
+    # NOTE: placing the camera resets all matrices to identity
     camera.set_projection()
     camera.place_camera()
 
-    # drawing vertices
-    glDrawElements(GL_TRIANGLE_STRIP, len(indices), GL_UNSIGNED_SHORT, None)
-
-    # unbind the vao
-    glBindVertexArray(0)
-
-    # perform rotation from center of screen
-    #   rotation of 1 degree every frame
+    # cube 1
+    glTranslatef(-3.0, 0.0, 0.0)
     glRotatef(global_rotation, 0.0, 0.0, 1.0)
+    original_cube.draw_object()
+    
+    # cube 2
+    glRotatef(-global_rotation, 0.0, 0.0, 1.0)
+    glTranslatef(6.0, 0.0, 0.0)
+    glRotatef(global_rotation, 0.0, 0.0, 1.0)
+    new_cube.draw_object()
+
+    # return to zero (not necessary)
+    glRotatef(-global_rotation, 0.0, 0.0, 1.0)
+    glTranslatef(-3.0, 0.0, 0.0)
 
     glFlush()
 
