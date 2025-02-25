@@ -104,9 +104,13 @@ def init():
     clock = pygame.time.Clock()
     running = True
 
+    # extra sanity checks
+    version = glGetString(GL_VERSION).decode()
+    print(f'OpenGL Version: {version}')
+
     # animation/object setup (preload values that will change here)
-    global tri_rotation
-    tri_rotation = 0
+    global global_rotation
+    global_rotation = 0
 
     # configure shaders
     vertex_shader_source = ''
@@ -144,7 +148,6 @@ def init():
     glBindVertexArray(vao)
 
     # initialize element array buffer (EBO)
-    global ebo # TODO: this should not be necessary?
     ebo = glGenBuffers(1)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, len(indices) * 16, indices, GL_STATIC_DRAW)
@@ -176,10 +179,24 @@ def init():
     # enable vertex array
     glEnableVertexAttribArray(1)
 
+    # TODO: remove debug
+    # print(f'VAO {vao}, EBO {ebo}, pVBO {vert_vbo}, cVBO {color_vbo}')
+    # bound_vao = glGetIntegerv(GL_VERTEX_ARRAY_BINDING)
+    # bound_buffer = glGetIntegerv(GL_ARRAY_BUFFER_BINDING)
+    # bound_element_buffer = glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING)
+    # print(f'Currently bound VAO: {bound_vao}, current buffers: {bound_buffer}, current element buffer: {bound_element_buffer}')
+
     # unbind all objects
+    # IMPORTANT: unbind VAO first to prevent detaching buffers
+    glBindVertexArray(0)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
     glBindBuffer(GL_ARRAY_BUFFER, 0)
-    glBindVertexArray(0)
+
+    # TODO: remove debug
+    # bound_vao = glGetIntegerv(GL_VERTEX_ARRAY_BINDING)
+    # bound_buffer = glGetIntegerv(GL_ARRAY_BUFFER_BINDING)
+    # bound_element_buffer = glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING)
+    # print(f'Currently bound VAO: {bound_vao}, current buffers: {bound_buffer}, current element buffer: {bound_element_buffer}')
 
 # Callback function used to display the scene
 # Currently it just draws a simple polyline (LINE_STRIP)
@@ -189,7 +206,6 @@ def display():
 
     # rebind the vao
     glBindVertexArray(vao)
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo) # TODO: this should not be necessary?
 
     # enable primitive restart
     glEnable(GL_PRIMITIVE_RESTART)
@@ -219,18 +235,16 @@ def display():
 
     # perform rotation from center of screen
     #   rotation of 1 degree every frame
-    glTranslatef(0.5, 0.5, 0.0)
-    glRotatef(tri_rotation, 0.0, 0.0, 1.0)
-    glTranslatef(-0.5, -0.5, 0.0)
+    glRotatef(global_rotation, 0.0, 0.0, 1.0)
 
     glFlush()
 
 # Advance the scene one frame
 def advance():
-    # rotate triangle by increasing angle
-    global tri_rotation
-    tri_rotation += 1.0
-    tri_rotation %= 360
+    # rotate world by increasing angle
+    global global_rotation
+    global_rotation += 1.0
+    global_rotation %= 360
 
 # Function used to handle any key events
 # event: The keyboard event that happened
@@ -239,7 +253,6 @@ def keyboard(event):
 
     key = event.key # "ASCII" value of the key pressed
     if key == 27:  # ASCII code 27 = ESC-key
-        # TODO: reimplement?
         running = False
     elif key == ord('r'):
         # Reset the camera position
