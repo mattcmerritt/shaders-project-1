@@ -15,14 +15,23 @@ import numpy as np
 import math
 from camera import *
 from utils import *
+import copy
 
 camera_angle = 60.0
+camera_start_position = Point(0.0, 0.0, 2.0)
 window_dimensions = (640, 640)  # A tuple for the window dimensions
 name = 'Hello World!'
 
 def main():
     # Create the initial window
     init()
+
+    # camera configuration
+    global camera 
+    camera = Camera(camera_angle, window_dimensions[0]/window_dimensions[1])
+    camera.eye = copy.deepcopy(camera_start_position)
+    camera.set_projection()
+    camera.place_camera()
     
     # Listens for events and draws the scene
     main_loop()
@@ -36,6 +45,11 @@ def main_loop():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.KEYDOWN:
+                keyboard(event)
+
+        # advance frame (for animations, objects, other stuff being tracked)
+        advance()
 
         # (Re)draw the scene
         display()
@@ -51,22 +65,22 @@ def init():
  
     # pygame setup
     pygame.init()
+    # configures held inputs to repeat for the first time after 300ms, and then every 50ms afterwards
+    #   action -> 300ms -> action -> 50ms -> action -> 50ms -> action ...
+    pygame.key.set_repeat(300, 50)
     screen = pygame.display.set_mode(window_dimensions, pygame.DOUBLEBUF|pygame.OPENGL)
     pygame.display.set_caption(name)
     clock = pygame.time.Clock()
     running = True
 
+    # animation/object setup (preload values that will change here)
+    global tri_rotation
+    tri_rotation = 0
+
     # basic OpenGL setup
     # glMatrixMode(GL_PROJECTION)
     # glLoadIdentity()
     # glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0)
-
-    # camera configuration
-    # TODO: find proper way to do this?
-    camera = Camera(camera_angle, window_dimensions[0]/window_dimensions[1])
-    camera.eye = Point(0.0, 0.0, 2.0)
-    camera.set_projection()
-    camera.place_camera()
 
     # configure shaders
     vertex_shader_source = ''
@@ -167,6 +181,10 @@ def display():
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, flat_proj_mat)
     glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, flat_modelview_mat)
 
+    # place camera
+    camera.set_projection()
+    camera.place_camera()
+
     # drawing vertices
     glDrawArrays(GL_TRIANGLE_FAN, 0, 3)
 
@@ -176,9 +194,59 @@ def display():
     # perform rotation from center of screen
     #   rotation of 1 degree every frame
     glTranslatef(0.5, 0.5, 0.0)
-    glRotatef(1.0, 0.0, 0.0, 1.0)
+    glRotatef(tri_rotation, 0.0, 0.0, 1.0)
     glTranslatef(-0.5, -0.5, 0.0)
 
     glFlush()
+
+# Advance the scene one frame
+def advance():
+    # rotate triangle by increasing angle
+    global tri_rotation
+    tri_rotation += 1.0
+    tri_rotation %= 360
+
+# Function used to handle any key events
+# event: The keyboard event that happened
+def keyboard(event):
+    global running, camera
+
+    key = event.key # "ASCII" value of the key pressed
+    if key == 27:  # ASCII code 27 = ESC-key
+        # TODO: reimplement?
+        running = False
+    elif key == ord('r'):
+        # Reset the camera position
+        camera.eye = copy.deepcopy(camera_start_position)
+        camera.place_camera()
+    elif key == ord('t'):
+        # Reset the camera angles
+        camera.yaw_angle = 0
+        camera.pitch_angle = 0
+        camera.place_camera()
+    elif key == ord('w'):
+        # Go forward
+        camera.slide(0,0,-1)
+    elif key == ord('s'):
+        # Go backward
+        camera.slide(0,0,1)
+    elif key == ord('a'):
+        # Go left (relative to camera)
+        camera.slide(1,0,0)
+    elif key == ord('d'):
+        # Go right (relative to camera)
+        camera.slide(-1,0,0)
+    elif key == ord('q'):
+        # Turn camera left (counter-clockwise)
+        camera.rotate_yaw(1)
+    elif key == ord('e'):
+        # Turn camera right (clockwise)
+        camera.rotate_yaw(-1)
+    elif key == ord('z'):
+        # Rotate camera up
+        camera.rotate_pitch(1)
+    elif key == ord('x'):
+        # Rotate camera down
+        camera.rotate_pitch(-1)
 
 if __name__ == '__main__': main()
