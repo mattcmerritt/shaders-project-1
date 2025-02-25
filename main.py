@@ -13,7 +13,10 @@ import pygame
 from OpenGL.GL import *
 import numpy as np
 import math
+from camera import *
+from utils import *
 
+camera_angle = 60.0
 window_dimensions = (640, 640)  # A tuple for the window dimensions
 name = 'Hello World!'
 
@@ -54,9 +57,16 @@ def init():
     running = True
 
     # basic OpenGL setup
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0)
+    # glMatrixMode(GL_PROJECTION)
+    # glLoadIdentity()
+    # glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0)
+
+    # camera configuration
+    # TODO: find proper way to do this?
+    camera = Camera(camera_angle, window_dimensions[0]/window_dimensions[1])
+    camera.eye = Point(0.0, 0.0, 2.0)
+    camera.set_projection()
+    camera.place_camera()
 
     # configure shaders
     vertex_shader_source = ''
