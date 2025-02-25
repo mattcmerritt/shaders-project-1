@@ -18,9 +18,40 @@ from utils import *
 import copy
 
 camera_angle = 60.0
-camera_start_position = Point(0.0, 0.0, 2.0)
+camera_start_position = Point(0.0, 0.0, 5.0)
 window_dimensions = (640, 640)  # A tuple for the window dimensions
-name = 'Hello World!'
+name = '3D Color Test'
+
+# CONSTANTS FOR CUBES
+# construct array for VBO, must be set to float32 for OpenGL
+vertices = np.array([
+    -1.0, -1.0, -1.0,   # left, bottom, front
+    -1.0, -1.0, 1.0,    # left, bottom, back
+    -1.0, 1.0, -1.0,    # left, top, front
+    -1.0, 1.0, 1.0,     # left, top, back
+    1.0, -1.0, -1.0,    # right, bottom, front
+    1.0, -1.0, 1.0,     # right, bottom, back
+    1.0, 1.0, -1.0,     # right, top, front
+    1.0, 1.0, 1.0,      # right, top, back
+], dtype='float32')
+
+# construct array for VBO, must be set to float32 for OpenGL
+colors = np.array([
+    1.0, 0.0, 0.0, 1.0, # left, bottom, front
+    0.0, 1.0, 0.0, 1.0, # left, bottom, back
+    0.0, 0.0, 1.0, 1.0, # left, top, front
+    1.0, 1.0, 1.0, 1.0, # left, top, back
+    1.0, 1.0, 0.0, 1.0, # right, bottom, front
+    0.0, 1.0, 1.0, 1.0, # right, bottom, back
+    1.0, 0.0, 1.0, 1.0, # right, top, front
+    0.2, 0.2, 0.2, 1.0, # right, top, back
+], dtype='float32')
+
+indices = np.array([
+    0, 1, 2, 3, 6, 7, 4, 5,     # first triangle strip
+    0xFFFF,                     # start second triangle strip
+    2, 6, 0, 4, 1, 5, 3, 7,     # second triangle strip
+], dtype='uint16')
 
 def main():
     # Create the initial window
@@ -77,11 +108,6 @@ def init():
     global tri_rotation
     tri_rotation = 0
 
-    # basic OpenGL setup
-    # glMatrixMode(GL_PROJECTION)
-    # glLoadIdentity()
-    # glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0)
-
     # configure shaders
     vertex_shader_source = ''
     with open('shader.vert', "r") as file:
@@ -112,19 +138,19 @@ def init():
     proj_loc = glGetUniformLocation(program, "projectionMatrix")
     modelview_loc = glGetUniformLocation(program, "modelviewMatrix")
 
-    # intialize vertex array object
+    # intialize vertex array object (VAO)
     global vao
     vao = glGenVertexArrays(1)
     glBindVertexArray(vao)
 
-    # initialize vertex buffer
-    # construct array for VBO, must be set to float32 for OpenGL
-    vertices = np.array([
-        0.5, 1, 0.0,
-        math.sin(2 * math.pi / 3) / 2 + 0.5, math.cos(2 * math.pi / 3) / 2 + 0.5, 0.0,
-        math.sin(-2 * math.pi / 3) / 2 + 0.5, math.cos(-2 * math.pi / 3) / 2 + 0.5, 0.0,
-    ], dtype='float32')
+    # initialize element array buffer (EBO)
+    global ebo # TODO: this should not be necessary?
+    ebo = glGenBuffers(1)
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo)
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, len(indices) * 16, indices, GL_STATIC_DRAW)
 
+    # initialize all VBOs
+    # vertex buffer for positions
     # allocate a buffer object reference (will be an integer)
     vert_vbo = glGenBuffers(1)
     # specify the buffer to work with
@@ -137,13 +163,7 @@ def init():
     # enable vertex array
     glEnableVertexAttribArray(0)
 
-    # construct array for VBO, must be set to float32 for OpenGL
-    colors = np.array([
-        1.0, 0.0, 0.0, 1.0,
-        0.0, 1.0, 0.0, 1.0,
-        0.0, 0.0, 1.0, 1.0,
-    ], dtype='float32')
-
+    # vertex buffer for colors
     # allocate a buffer object reference (will be an integer)
     color_vbo = glGenBuffers(1)
     # specify the buffer to work with
@@ -151,12 +171,13 @@ def init():
     # populate the data of the buffer
     glBufferData(GL_ARRAY_BUFFER, len(colors) * 32, colors, GL_STATIC_DRAW)
     # set the vertex pointer for the shader
-    # note: 3 is the number of coordinates given in each vertex
+    # note: 4 is the number of coordinates given in each vertex
     glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, None)
     # enable vertex array
     glEnableVertexAttribArray(1)
 
-    # unbind vertex buffer and array objects
+    # unbind all objects
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
     glBindBuffer(GL_ARRAY_BUFFER, 0)
     glBindVertexArray(0)
 
@@ -168,6 +189,11 @@ def display():
 
     # rebind the vao
     glBindVertexArray(vao)
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo) # TODO: this should not be necessary?
+
+    # enable primitive restart
+    glEnable(GL_PRIMITIVE_RESTART)
+    glPrimitiveRestartIndex(0xFFFF)
 
     # access current transformation matrices
     proj_mat = glGetFloatv(GL_PROJECTION_MATRIX)
@@ -186,10 +212,10 @@ def display():
     camera.place_camera()
 
     # drawing vertices
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 3)
+    glDrawElements(GL_TRIANGLE_STRIP, len(indices), GL_UNSIGNED_SHORT, None)
 
     # unbind the vao
-    glBindVertexArray(vao)
+    glBindVertexArray(0)
 
     # perform rotation from center of screen
     #   rotation of 1 degree every frame
