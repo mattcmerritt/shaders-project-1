@@ -21,3 +21,10 @@ class RenderedObject:
         # load matrix values into uniforms for shader
         glUniformMatrix4fv(RenderedObject.proj_loc, 1, GL_FALSE, flat_proj_mat)
         glUniformMatrix4fv(RenderedObject.modelview_loc, 1, GL_FALSE, flat_modelview_mat)
+
+    def draw_object(self): 
+        # fetch most recent matrices for shaders
+        RenderedObject.update_matrices()
+
+        # additional functionality will be handled by child classes
+        pass

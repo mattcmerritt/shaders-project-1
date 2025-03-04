@@ -77,14 +77,10 @@ class Cube(RenderedObject):
         # print(f'Currently bound VAO: {bound_vao}, current buffers: {bound_buffer}, current element buffer: {bound_element_buffer}')
 
     def draw_object(self): 
-        # fetch most recent matrices for shaders
-        RenderedObject.update_matrices()
-
+        super().draw_object()
         # rebind the vao
         glBindVertexArray(self.vao)
-
         # drawing vertices
         glDrawElements(GL_TRIANGLE_STRIP, len(Cube.indices), GL_UNSIGNED_SHORT, None)
-
         # unbind the vao
         glBindVertexArray(0)
