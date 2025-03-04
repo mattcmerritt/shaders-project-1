@@ -18,6 +18,7 @@ from camera import *
 from utils import *
 from rendered_object import RenderedObject
 from cube import Cube
+from cylinder import Cylinder
 
 camera_angle = 60.0
 camera_start_position = Point(0.0, 0.0, 5.0)
@@ -146,6 +147,10 @@ def init():
     original_cube = Cube(colors)
     new_cube = Cube(old_colors)
 
+    # construct cylinder
+    global cylinder
+    cylinder = Cylinder(6, 2)
+
     # enable primitive restart 
     #   necessary for objects with multiple geometries in one VAO
     glEnable(GL_PRIMITIVE_RESTART)
@@ -166,19 +171,25 @@ def display():
     camera.place_camera()
 
     # cube 1
-    glTranslatef(-3.0, 0.0, 0.0)
-    glRotatef(global_rotation, 0.0, 0.0, 1.0)
-    original_cube.draw_object()
+    # glTranslatef(-3.0, 0.0, 0.0)
+    # glRotatef(global_rotation, 0.0, 0.0, 1.0)
+    # original_cube.draw_object()
     
     # cube 2
-    glRotatef(-global_rotation, 0.0, 0.0, 1.0)
-    glTranslatef(6.0, 0.0, 0.0)
-    glRotatef(global_rotation, 0.0, 0.0, 1.0)
-    new_cube.draw_object()
+    # glRotatef(-global_rotation, 0.0, 0.0, 1.0)
+    # glTranslatef(6.0, 0.0, 0.0)
+    # glRotatef(global_rotation, 0.0, 0.0, 1.0)
+    # new_cube.draw_object()
 
     # return to zero (not necessary)
-    glRotatef(-global_rotation, 0.0, 0.0, 1.0)
-    glTranslatef(-3.0, 0.0, 0.0)
+    # glRotatef(-global_rotation, 0.0, 0.0, 1.0)
+    # glTranslatef(-3.0, 0.0, 0.0)
+
+    # cylinder
+    # glTranslatef(0.0, -1.0, 0.0)
+    # glScalef(1.0, 2.0, 1.0)
+    # glRotatef(90.0, -1.0, 0.0, 0.0)
+    cylinder.draw_object()
 
     glFlush()
 
