@@ -110,37 +110,96 @@ def init():
 
     # configure shaders
     vertex_shader_source = ''
-    with open('shader.vert', "r") as file:
+    with open('shader.vert', 'r') as file:
         vertex_shader_source = file.readlines()
 
     fragment_shader_source = ''
-    with open('shader.frag', "r") as file:
+    with open('shader.frag', 'r') as file:
         fragment_shader_source = file.readlines()
 
-    program = glCreateProgram()
+    # main shader program
+    global main_program
+    main_program = glCreateProgram()
 
     vertex_shader = glCreateShader(GL_VERTEX_SHADER)
     glShaderSource(vertex_shader, vertex_shader_source)
     glCompileShader(vertex_shader)
-    glAttachShader(program, vertex_shader)
+    glAttachShader(main_program, vertex_shader)
 
     fragment_shader = glCreateShader(GL_FRAGMENT_SHADER)
     glShaderSource(fragment_shader, fragment_shader_source)
     glCompileShader(fragment_shader)
-    glAttachShader(program, fragment_shader)
+    glAttachShader(main_program, fragment_shader)
 
-    glLinkProgram(program)
-    glUseProgram(program) # NOTE: this line will fail if shaders do not compile
-    
+    glLinkProgram(main_program)
+
+    print(f'Main Program log: {glGetProgramInfoLog(main_program)}')
+    print(f'Vertex Shader log: {glGetShaderInfoLog(vertex_shader)}')
+    print(f'Fragment Shader log: {glGetShaderInfoLog(fragment_shader)}')
+
+    glUseProgram(main_program) # NOTE: this line will fail if shaders do not compile
+
     # uniforms
     global proj_loc, modelview_loc
 
-    proj_loc = glGetUniformLocation(program, "projectionMatrix")
-    modelview_loc = glGetUniformLocation(program, "modelviewMatrix")
+    proj_loc = glGetUniformLocation(main_program, 'projectionMatrix')
+    modelview_loc = glGetUniformLocation(main_program, 'modelviewMatrix')
 
     # pass uniform locations to rendered object parent class
     RenderedObject.proj_loc = proj_loc
     RenderedObject.modelview_loc = modelview_loc
+
+    # adding secondary debug program for viewing normals
+    # configure shaders
+    vertex_shader_source = ''
+    with open('normal_shader.vert', 'r') as file:
+        vertex_shader_source = file.readlines()
+
+    fragment_shader_source = ''
+    with open('normal_shader.frag', 'r') as file:
+        fragment_shader_source = file.readlines()
+
+    geometry_shader_source = ''
+    with open('normal_shader.geom', 'r') as file:
+        geometry_shader_source = file.readlines()
+
+    # secondary debug shader program
+    global normal_view_program
+    normal_view_program = glCreateProgram()
+
+    vertex_shader = glCreateShader(GL_VERTEX_SHADER)
+    glShaderSource(vertex_shader, vertex_shader_source)
+    glCompileShader(vertex_shader)
+    glAttachShader(normal_view_program, vertex_shader)
+
+    geometry_shader = glCreateShader(GL_GEOMETRY_SHADER)
+    glShaderSource(geometry_shader, geometry_shader_source)
+    glCompileShader(geometry_shader)
+    glAttachShader(normal_view_program, geometry_shader)
+
+    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER)
+    glShaderSource(fragment_shader, fragment_shader_source)
+    glCompileShader(fragment_shader)
+    glAttachShader(normal_view_program, fragment_shader)
+
+    glLinkProgram(normal_view_program)
+
+    print(f'Normal Program log: {glGetProgramInfoLog(normal_view_program)}')
+    print(f'Vertex Shader log: {glGetShaderInfoLog(vertex_shader)}')
+    print(f'Geometry Shader log: {glGetShaderInfoLog(geometry_shader)}')
+    print(f'Fragment Shader log: {glGetShaderInfoLog(fragment_shader)}')
+
+    glUseProgram(normal_view_program) # NOTE: this line will fail if shaders do not compile
+
+    # uniforms
+    global normal_proj_loc, normal_modelview_loc
+
+    normal_proj_loc = glGetUniformLocation(normal_view_program, 'projectionMatrix')
+    normal_modelview_loc = glGetUniformLocation(normal_view_program, 'modelviewMatrix')
+
+    # pass uniform locations to rendered object parent class
+    RenderedObject.normal_proj_loc = normal_proj_loc
+    RenderedObject.normal_modelview_loc = normal_modelview_loc
 
     # construct cubes
     global original_cube, new_cube
@@ -148,8 +207,8 @@ def init():
     new_cube = Cube(old_colors)
 
     # construct cylinder
-    global cylinder
-    cylinder = Cylinder(6, 2)
+    # global cylinder
+    # cylinder = Cylinder(6, 2)
 
     # enable primitive restart 
     #   necessary for objects with multiple geometries in one VAO
@@ -163,7 +222,8 @@ def init():
 # Callback function used to display the scene
 def display():
     glClearColor(0.0, 0.0, 0.0, 0.0)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    glClear(GL_COLOR_BUFFER_BIT)
+    glClear(GL_DEPTH_BUFFER_BIT)
 
     # place camera
     # NOTE: placing the camera resets all matrices to identity
@@ -172,8 +232,12 @@ def display():
 
     # cube 1
     # glTranslatef(-3.0, 0.0, 0.0)
-    # glRotatef(global_rotation, 0.0, 0.0, 1.0)
-    # original_cube.draw_object()
+    glRotatef(global_rotation, 0.0, 0.0, 1.0)
+    glRotatef(global_rotation, 0.0, 1.0, 0.0)
+    glUseProgram(main_program)
+    original_cube.draw_object()
+    glUseProgram(normal_view_program)
+    original_cube.draw_normals()
     
     # cube 2
     # glRotatef(-global_rotation, 0.0, 0.0, 1.0)
@@ -189,7 +253,7 @@ def display():
     # glTranslatef(0.0, -1.0, 0.0)
     # glScalef(1.0, 2.0, 1.0)
     # glRotatef(90.0, -1.0, 0.0, 0.0)
-    cylinder.draw_object()
+    # cylinder.draw_object()
 
     glFlush()
 
