@@ -21,6 +21,7 @@ class Cube(RenderedObject):
     ], dtype='uint16')
 
     def __init__(self, colors):
+        super().__init__()
         # intialize vertex array object (VAO)
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)

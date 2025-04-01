@@ -58,7 +58,8 @@ def main():
     camera = Camera(camera_angle, window_dimensions[0]/window_dimensions[1])
     camera.eye = copy.deepcopy(camera_start_position)
     camera.set_projection()
-    camera.place_camera()
+    # camera.place_camera()
+    camera.update_view_matrix()
     
     # Listens for events and draws the scene
     main_loop()
@@ -168,12 +169,17 @@ def display():
     # place camera
     # NOTE: placing the camera resets all matrices to identity
     camera.set_projection()
-    camera.place_camera()
+    # camera.place_camera()
+    camera.update_view_matrix()
+
 
     # cube 1
     # glTranslatef(-3.0, 0.0, 0.0)
     # glRotatef(global_rotation, 0.0, 0.0, 1.0)
-    # original_cube.draw_object()
+    original_cube.draw_object()
+
+    # # transform cube (please work!)
+    # original_cube.translate(1, 0, 0) # does same thing as holding a (left)
     
     # cube 2
     # glRotatef(-global_rotation, 0.0, 0.0, 1.0)
@@ -189,7 +195,7 @@ def display():
     # glTranslatef(0.0, -1.0, 0.0)
     # glScalef(1.0, 2.0, 1.0)
     # glRotatef(90.0, -1.0, 0.0, 0.0)
-    cylinder.draw_object()
+    # cylinder.draw_object()
 
     glFlush()
 
@@ -211,12 +217,14 @@ def keyboard(event):
     elif key == ord('r'):
         # Reset the camera position
         camera.eye = copy.deepcopy(camera_start_position)
-        camera.place_camera()
+        # camera.place_camera()
+        camera.update_view_matrix()
     elif key == ord('t'):
         # Reset the camera angles
         camera.yaw_angle = 0
         camera.pitch_angle = 0
-        camera.place_camera()
+        # camera.place_camera()
+        camera.update_view_matrix()
     elif key == ord('w'):
         # Go forward
         camera.slide(0,0,-1)
