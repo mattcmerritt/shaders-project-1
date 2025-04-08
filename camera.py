@@ -4,6 +4,7 @@ import math
 from utils import *
 import numpy as np
 import copy
+import sys
 
 class Camera:
     instance = None
@@ -22,6 +23,7 @@ class Camera:
         self.pitch_angle = pitch_angle
         # TODO: temp value to create field. maybe unnecessary?
         self.view_matrix = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]], dtype='float32')
+        self.projection_matrix = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]], dtype='float32')
         # initialize view matrix once everything else is set
         self.update_view_matrix() 
         # set instance
@@ -31,27 +33,41 @@ class Camera:
     #   would not rely on GL and GLU functionality
     #   may need this: https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluPerspective.xml
     def set_projection(self):
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        gluPerspective(self.cam_angle, self.asp_ratio, self.near, self.far)
+        # glMatrixMode(GL_PROJECTION)
+
+        # glLoadIdentity()
+        self.projection_matrix = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]], dtype='float32')
+
+        # gluPerspective(self.cam_angle, self.asp_ratio, self.near, self.far)
+        f = 1 / np.tan(math.radians(self.cam_angle/2))
+        perspective_matrix = np.array([
+            [f/self.asp_ratio, 0.0, 0.0, 0.0],
+            [0.0, f, 0.0, 0.0],
+            [0.0, 0.0, (self.far+self.near)/(self.near-self.far), (2*self.far*self.near)/(self.near-self.far)],
+            [0.0, 0.0, -1.0, 0.0]
+        ], dtype='float32')
+        perspective_matrix = np.transpose(perspective_matrix)
+
+        self.projection_matrix = perspective_matrix @ self.projection_matrix
 
     # TODO: potentially revisit this and use a custom matrix management system
     #   would not rely on GL and GLU functionality
     #   may need this: https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml
-    def place_camera(self):
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
+    # def place_camera(self):
+    #     glMatrixMode(GL_MODELVIEW)
+    #     glLoadIdentity()
 
-        # compute point to look at using yaw angle and pitch angle (no roll allowed)
-        yaw_angle_rad = math.radians(self.yaw_angle)
-        pitch_angle_rad = math.radians(self.pitch_angle)
-        look_x = self.eye.x - math.sin(yaw_angle_rad) * math.cos(pitch_angle_rad)
-        look_y = self.eye.y - math.sin(pitch_angle_rad)
-        look_z = self.eye.z - math.cos(yaw_angle_rad) * math.cos(pitch_angle_rad)
+    #     # compute point to look at using yaw angle and pitch angle (no roll allowed)
+    #     yaw_angle_rad = math.radians(self.yaw_angle)
+    #     pitch_angle_rad = math.radians(self.pitch_angle)
+    #     look_x = self.eye.x - math.sin(yaw_angle_rad) * math.cos(pitch_angle_rad)
+    #     look_y = self.eye.y - math.sin(pitch_angle_rad)
+    #     look_z = self.eye.z - math.cos(yaw_angle_rad) * math.cos(pitch_angle_rad)
 
-        # TODO: fix issues with pitch around 90 degrees
-        gluLookAt(self.eye.x, self.eye.y, self.eye.z, look_x, look_y, look_z, 0.0, 1.0, 0.0)
+    #     # TODO: fix issues with pitch around 90 degrees
+    #     gluLookAt(self.eye.x, self.eye.y, self.eye.z, look_x, look_y, look_z, 0.0, 1.0, 0.0)
 
+    # TODO: clean
     def update_view_matrix(self):
         # compute point to look at using yaw angle and pitch angle (no roll allowed)
         yaw_angle_rad = math.radians(self.yaw_angle)
@@ -63,17 +79,35 @@ class Camera:
         # TODO: fix issues with pitch around 90 degrees (might still exist, untested?)
         # gluLookAt equivalent here (https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml)
 
+        # self.eye = Point(1, 2, 3)
+        
+        # look_x = 2
+        # look_y = 5
+        # look_z = 14
+
+        # glMatrixMode(GL_MODELVIEW)
+        # glLoadIdentity()
+        # gluLookAt(self.eye.x, self.eye.y, self.eye.z, look_x, look_y, look_z, 0.0, 1.0, 0.0)
+        # modelview_mat = glGetFloatv(GL_MODELVIEW_MATRIX)
+        # flat_modelview_mat = np.array(modelview_mat).flatten()
+        # # print(flat_modelview_mat)
+        # print(modelview_mat)
+
+        # set to identity
+        self.view_matrix = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]], dtype='float32')
+
         # create center
         center = Point(look_x, look_y, look_z)
 
         # calc F
-        f = Vector(p=center, q=self.eye)
+        f = Vector(p=self.eye, q=center)
+        # print(f)
 
         # create up (0, 1, 0)
         # up = Vector(p=Point(0, 1, 0))
 
         # normalize f and up
-        f_norm = Vector(p=center, q=self.eye) # same as f
+        f_norm = Vector(p=self.eye, q=center) # same as f
         f_norm.normalize()
 
         up_norm = Vector(p=Point(0, 1, 0)) # same as up
@@ -81,21 +115,25 @@ class Camera:
 
         # take cross product of fnorm and upnorm to get s
         s = f_norm.cross(up_norm)
+        # print(s)
 
         # normalize s
         s_norm = f_norm.cross(up_norm) # same as s
         s_norm.normalize()
+        # print(s_norm)
 
         # use snorm to find u
         u = s_norm.cross(f_norm)
+        u.normalize() # TODO: make consistent with other vectors
 
         # create M
         m = np.array([
-            [s.dx, s.dy, s.dz, 0.0],
+            [s_norm.dx, s_norm.dy, s_norm.dz, 0.0],
             [u.dx, u.dy, u.dz, 0.0],
             [-f_norm.dx, -f_norm.dy, -f_norm.dz, 0.0],
             [0.0, 0.0, 0.0, 1.0]
         ], dtype='float32')
+        m = np.transpose(m)
 
         # mult view matrix by M
         self.view_matrix = m @ self.view_matrix
@@ -107,7 +145,15 @@ class Camera:
             [0.0, 0.0, 1.0, -self.eye.z],
             [0.0, 0.0, 0.0, 1.0]
         ], dtype='float32')
+        tm = np.transpose(tm)
         self.view_matrix = tm @ self.view_matrix
+
+        # flat_view_mat = self.view_matrix.flatten()
+        # print(flat_view_mat)
+
+        # print(self.view_matrix)
+
+        # sys.exit(0)
 
     # note: sliding does not support vertical angle adjustments
     #   the movement is always assumed to be level with the ground

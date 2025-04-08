@@ -19,15 +19,16 @@ class RenderedObject:
 
         # transformations go here
         # TODO: remove both? or use new ones instead
-        proj_mat = glGetFloatv(GL_PROJECTION_MATRIX)
+        # proj_mat = glGetFloatv(GL_PROJECTION_MATRIX)
         # modelview_mat = glGetFloatv(GL_MODELVIEW_MATRIX)
 
         # print(f'proj: {proj_mat}')
         # print(f'mdvw: {modelview_mat}')
 
         # flatten the matrices to arrays
-        flat_proj_mat = np.array(proj_mat).flatten()
+        # flat_proj_mat = np.array(proj_mat).flatten()
         # flat_modelview_mat = np.array(modelview_mat).flatten()
+        flat_proj_mat = np.array(Camera.instance.projection_matrix).flatten()
         flat_modelview_mat = np.array(modelview_matrix).flatten()
 
         # load matrix values into uniforms for shader
@@ -38,7 +39,7 @@ class RenderedObject:
         # TODO: make camera static
         # calc modelview matrix using model and view matrices
         # print(type(Camera.instance))
-        modelview_matrix = Camera.instance.view_matrix @ self.model_matrix
+        modelview_matrix = self.model_matrix @ Camera.instance.view_matrix
 
         # fetch most recent matrices for shaders
         RenderedObject.update_matrices(modelview_matrix)
@@ -46,6 +47,7 @@ class RenderedObject:
         # additional functionality will be handled by child classes
         pass
 
+    # TODO: transpose all
     def translate(self, x, y, z):
         translate_matrix = np.array([
             [1.0, 0.0, 0.0, x],
@@ -53,6 +55,7 @@ class RenderedObject:
             [0.0, 0.0, 1.0, z],
             [0.0, 0.0, 0.0, 1.0]
         ], dtype='float32')
+        translate_matrix = np.transpose(translate_matrix)
         self.model_matrix = translate_matrix @ self.model_matrix
 
     def scale(self, x, y, z):
@@ -62,6 +65,7 @@ class RenderedObject:
             [0.0, 0.0, z, 0.0],
             [0.0, 0.0, 0.0, 1.0]
         ], dtype='float32')
+        scale_matrix = np.transpose(scale_matrix)
         self.model_matrix = scale_matrix @ self.model_matrix
 
     # TODO: can these three rotate functions be combined into one function? does the order matter?
@@ -72,6 +76,7 @@ class RenderedObject:
             [0.0, math.sin(math.radians(deg)), math.cos(math.radians(deg)), 0.0],
             [0.0, 0.0, 0.0, 1.0]
         ], dtype='float32')
+        x_rot_matrix = np.transpose(x_rot_matrix)
         self.model_matrix = x_rot_matrix @ self.model_matrix
 
     def rotate_around_y(self, deg):
@@ -81,6 +86,7 @@ class RenderedObject:
             [-math.sin(math.radians(deg)), 0.0, math.cos(math.radians(deg)), 0.0],
             [0.0, 0.0, 0.0, 1.0]
         ], dtype='float32')
+        y_rot_matrix = np.transpose(y_rot_matrix)
         self.model_matrix = y_rot_matrix @ self.model_matrix
 
     def rotate_around_z(self, deg):
@@ -90,7 +96,9 @@ class RenderedObject:
             [0.0, 0.0, 1.0, 0.0],
             [0.0, 0.0, 0.0, 1.0]
         ], dtype='float32')
+        z_rot_matrix = np.transpose(z_rot_matrix)
         self.model_matrix = z_rot_matrix @ self.model_matrix
 
     def apply_transform(self, transformation_matrix=np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]], dtype='float32')):
+        # transformation_matrix = np.transpose(transformation_matrix)
         self.model_matrix = transformation_matrix @ self.model_matrix

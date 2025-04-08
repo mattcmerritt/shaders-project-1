@@ -57,6 +57,7 @@ def main():
     global camera 
     camera = Camera(camera_angle, window_dimensions[0]/window_dimensions[1])
     camera.eye = copy.deepcopy(camera_start_position)
+    # camera.eye = Point(0, 0, 0)
     camera.set_projection()
     # camera.place_camera()
     camera.update_view_matrix()
@@ -161,6 +162,17 @@ def init():
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LESS)
 
+    # set object transforms (model matrices)
+    position_objects()
+
+def position_objects():
+    # TODO: determine why objects are moving away from one another
+    original_cube.translate(1, 0, 0)
+
+    new_cube.translate(0, 0, -3)
+    new_cube.rotate_around_y(30)
+
+
 # Callback function used to display the scene
 def display():
     glClearColor(0.0, 0.0, 0.0, 0.0)
@@ -185,7 +197,7 @@ def display():
     # glRotatef(-global_rotation, 0.0, 0.0, 1.0)
     # glTranslatef(6.0, 0.0, 0.0)
     # glRotatef(global_rotation, 0.0, 0.0, 1.0)
-    # new_cube.draw_object()
+    new_cube.draw_object()
 
     # return to zero (not necessary)
     # glRotatef(-global_rotation, 0.0, 0.0, 1.0)
