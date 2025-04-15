@@ -19,6 +19,8 @@ from utils import *
 from rendered_object import RenderedObject
 from cube import Cube
 from cylinder import Cylinder
+from light import Light
+from material import Material
 
 camera_angle = 60.0
 camera_start_position = Point(0.0, 0.0, 5.0)
@@ -47,6 +49,17 @@ old_colors = np.array([
     0.0, 0.0, 1.0, 1.0, # right, bottom, back
     0.0, 1.0, 0.0, 1.0, # right, top, front
     1.0, 0.0, 0.0, 1.0, # right, top, back
+], dtype='float32')
+
+single_color = np.array([
+    1.0, 0.0, 1.0, 1.0, # left, bottom, front
+    1.0, 0.0, 1.0, 1.0, # left, bottom, back
+    1.0, 0.0, 1.0, 1.0, # left, top, front
+    1.0, 0.0, 1.0, 1.0, # left, top, back
+    1.0, 0.0, 1.0, 1.0, # right, bottom, front
+    1.0, 0.0, 1.0, 1.0, # right, bottom, back
+    1.0, 0.0, 1.0, 1.0, # right, top, front
+    1.0, 0.0, 1.0, 1.0, # right, top, back
 ], dtype='float32')
 
 def main():
@@ -149,6 +162,35 @@ def init():
     RenderedObject.proj_loc = proj_loc
     RenderedObject.modelview_loc = modelview_loc
 
+    # uniforms for lighting
+    # light0_enabled = glGetUniformLocation(main_program, 'lights[0].isEnabled')
+    # light0_ambient = glGetUniformLocation(main_program, 'lights[0].ambient')
+    # light0_color = glGetUniformLocation(main_program, 'lights[0].color')
+    # light0_position = glGetUniformLocation(main_program, 'lights[0].position')
+
+    # glUniform1i(light0_enabled, 1)
+    # glUniform3f(light0_ambient, 0.2, 0.2, 0.2)
+    # glUniform3f(light0_color, 1.0, 1.0, 1.0)
+    # glUniform3f(light0_position, 0.0, 3.0, 3.0)     # TODO: the light position will need to be transformed in shader
+
+    # uniforms for lighting (handled by class)
+    global light_0
+    light_0 = Light(0, main_program, ambient=(0.2, 0.2, 0.2), position=(1.0, 0.0, 0.0))
+    # TODO: add a place light function to move the light
+    # light_1 = Light(1, main_program, color=(0.0, 0.0, 1.0), ambient=(0.2, 0.2, 0.2), position=(0.0, 0.0, 3.0))
+
+    eyeDirection_loc = glGetUniformLocation(main_program, 'eyeDirection')
+    glUniform3f(eyeDirection_loc, 0.0, 0.0, -1.0)
+
+    # uniforms for materials
+    # mat0_ambient = glGetUniformLocation(main_program, 'materials[0].ambient')
+    # mat0_diffuse = glGetUniformLocation(main_program, 'materials[0].diffuse')
+    # glUniform3f(mat0_ambient, 1.0, 1.0, 1.0)
+    # glUniform3f(mat0_diffuse, 1.0, 1.0, 1.0)
+
+    # uniforms for materials (handled by class)
+    material_0 = Material(0, main_program, shininess=100)
+
     # adding secondary debug program for viewing normals
     # configure shaders
     vertex_shader_source = ''
@@ -202,9 +244,10 @@ def init():
     RenderedObject.normal_modelview_loc = normal_modelview_loc
 
     # construct cubes
-    global original_cube, new_cube
+    global original_cube, new_cube, single_color_cube
     original_cube = Cube(colors)
     new_cube = Cube(old_colors)
+    single_color_cube = Cube(single_color)
 
     # construct cylinder
     # global cylinder
@@ -230,14 +273,22 @@ def display():
     camera.set_projection()
     camera.place_camera()
 
+    # LIGHT POSITION UPDATE
+    glUseProgram(main_program)
+    world_pos = np.array([0.0, 5.0, 0.0, 1.0], dtype='float32')
+    modelview_mat = np.array(glGetFloatv(GL_MODELVIEW_MATRIX), dtype='float32')
+    light_0.position = (*(list(map(lambda x : x.item(), world_pos @ modelview_mat)))[:3],)
+    # print(light_0.position)
+    light_0.assign_uniform_values()
+
     # cube 1
     # glTranslatef(-3.0, 0.0, 0.0)
     glRotatef(global_rotation, 0.0, 0.0, 1.0)
-    glRotatef(global_rotation, 0.0, 1.0, 0.0)
-    glUseProgram(main_program)
-    original_cube.draw_object()
+    # glRotatef(global_rotation, 0.0, 1.0, 0.0)
+    
+    single_color_cube.draw_object()
     glUseProgram(normal_view_program)
-    original_cube.draw_normals()
+    single_color_cube.draw_normals()
     
     # cube 2
     # glRotatef(-global_rotation, 0.0, 0.0, 1.0)

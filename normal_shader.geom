@@ -28,8 +28,8 @@ void main()
 
         // gl_Position = gs_in[n].vertPosition + vec4(gs_in[n].vertNormal, 0.0); // this does cause depth issues?
         // gl_Position = gs_in[n].vertPosition + vec4(0.0, 1.0, 0.0, 0.0); // this one does not cause depth issues
-        gl_Position = gs_in[n].vertPosition + vec4(0.0, 0.0, -1.0, 0.0); // this one does not show anything?
-        gl_Position = gs_in[n].vertPosition + vec4(gs_in[n].vertNormal.xy, 0.0, 0.0); // this works?
+        // gl_Position = gs_in[n].vertPosition + vec4(0.0, 0.0, -1.0, 0.0); // this one does not show anything?
+        gl_Position = gs_in[n].vertPosition + vec4(gs_in[n].vertNormal.xy, 0.0, 0.0); // this works? why is z = 0.0?
         gs_out.vertPosition = gl_Position;
         gs_out.vertColor = gs_in[n].vertColor;
         gs_out.vertNormal = gs_in[n].vertNormal;
