@@ -19,6 +19,8 @@ from utils import *
 from rendered_object import RenderedObject
 from cube import Cube
 from cylinder import Cylinder
+from light import Light
+from material import Material
 
 camera_angle = 60.0
 camera_start_position = Point(0.0, 0.0, 5.0)
@@ -47,6 +49,17 @@ old_colors = np.array([
     0.0, 0.0, 1.0, 1.0, # right, bottom, back
     0.0, 1.0, 0.0, 1.0, # right, top, front
     1.0, 0.0, 0.0, 1.0, # right, top, back
+], dtype='float32')
+
+single_color = np.array([
+    1.0, 0.0, 1.0, 1.0, # left, bottom, front
+    1.0, 0.0, 1.0, 1.0, # left, bottom, back
+    1.0, 0.0, 1.0, 1.0, # left, top, front
+    1.0, 0.0, 1.0, 1.0, # left, top, back
+    1.0, 0.0, 1.0, 1.0, # right, bottom, front
+    1.0, 0.0, 1.0, 1.0, # right, bottom, back
+    1.0, 0.0, 1.0, 1.0, # right, top, front
+    1.0, 0.0, 1.0, 1.0, # right, top, back
 ], dtype='float32')
 
 def main():
@@ -112,46 +125,135 @@ def init():
 
     # configure shaders
     vertex_shader_source = ''
-    with open('shader.vert', "r") as file:
+    with open('shader.vert', 'r') as file:
         vertex_shader_source = file.readlines()
 
     fragment_shader_source = ''
-    with open('shader.frag', "r") as file:
+    with open('shader.frag', 'r') as file:
         fragment_shader_source = file.readlines()
 
-    program = glCreateProgram()
+    # main shader program
+    global main_program
+    main_program = glCreateProgram()
 
     vertex_shader = glCreateShader(GL_VERTEX_SHADER)
     glShaderSource(vertex_shader, vertex_shader_source)
     glCompileShader(vertex_shader)
-    glAttachShader(program, vertex_shader)
+    glAttachShader(main_program, vertex_shader)
 
     fragment_shader = glCreateShader(GL_FRAGMENT_SHADER)
     glShaderSource(fragment_shader, fragment_shader_source)
     glCompileShader(fragment_shader)
-    glAttachShader(program, fragment_shader)
+    glAttachShader(main_program, fragment_shader)
 
-    glLinkProgram(program)
-    glUseProgram(program) # NOTE: this line will fail if shaders do not compile
-    
+    glLinkProgram(main_program)
+
+    print(f'Main Program log: {glGetProgramInfoLog(main_program)}')
+    print(f'Vertex Shader log: {glGetShaderInfoLog(vertex_shader)}')
+    print(f'Fragment Shader log: {glGetShaderInfoLog(fragment_shader)}')
+
+    glUseProgram(main_program) # NOTE: this line will fail if shaders do not compile
+
     # uniforms
     global proj_loc, modelview_loc
 
-    proj_loc = glGetUniformLocation(program, "projectionMatrix")
-    modelview_loc = glGetUniformLocation(program, "modelviewMatrix")
+    proj_loc = glGetUniformLocation(main_program, 'projectionMatrix')
+    modelview_loc = glGetUniformLocation(main_program, 'modelviewMatrix')
 
     # pass uniform locations to rendered object parent class
     RenderedObject.proj_loc = proj_loc
     RenderedObject.modelview_loc = modelview_loc
 
+    # uniforms for lighting
+    # light0_enabled = glGetUniformLocation(main_program, 'lights[0].isEnabled')
+    # light0_ambient = glGetUniformLocation(main_program, 'lights[0].ambient')
+    # light0_color = glGetUniformLocation(main_program, 'lights[0].color')
+    # light0_position = glGetUniformLocation(main_program, 'lights[0].position')
+
+    # glUniform1i(light0_enabled, 1)
+    # glUniform3f(light0_ambient, 0.2, 0.2, 0.2)
+    # glUniform3f(light0_color, 1.0, 1.0, 1.0)
+    # glUniform3f(light0_position, 0.0, 3.0, 3.0)     # TODO: the light position will need to be transformed in shader
+
+    # uniforms for lighting (handled by class)
+    global light_0
+    light_0 = Light(0, main_program, ambient=(0.2, 0.2, 0.2), position=(1.0, 0.0, 0.0))
+    # TODO: add a place light function to move the light
+    # light_1 = Light(1, main_program, color=(0.0, 0.0, 1.0), ambient=(0.2, 0.2, 0.2), position=(0.0, 0.0, 3.0))
+
+    eyeDirection_loc = glGetUniformLocation(main_program, 'eyeDirection')
+    glUniform3f(eyeDirection_loc, 0.0, 0.0, -1.0)
+
+    # uniforms for materials
+    # mat0_ambient = glGetUniformLocation(main_program, 'materials[0].ambient')
+    # mat0_diffuse = glGetUniformLocation(main_program, 'materials[0].diffuse')
+    # glUniform3f(mat0_ambient, 1.0, 1.0, 1.0)
+    # glUniform3f(mat0_diffuse, 1.0, 1.0, 1.0)
+
+    # uniforms for materials (handled by class)
+    material_0 = Material(0, main_program, shininess=100)
+
+    # adding secondary debug program for viewing normals
+    # configure shaders
+    vertex_shader_source = ''
+    with open('normal_shader.vert', 'r') as file:
+        vertex_shader_source = file.readlines()
+
+    fragment_shader_source = ''
+    with open('normal_shader.frag', 'r') as file:
+        fragment_shader_source = file.readlines()
+
+    geometry_shader_source = ''
+    with open('normal_shader.geom', 'r') as file:
+        geometry_shader_source = file.readlines()
+
+    # secondary debug shader program
+    global normal_view_program
+    normal_view_program = glCreateProgram()
+
+    vertex_shader = glCreateShader(GL_VERTEX_SHADER)
+    glShaderSource(vertex_shader, vertex_shader_source)
+    glCompileShader(vertex_shader)
+    glAttachShader(normal_view_program, vertex_shader)
+
+    geometry_shader = glCreateShader(GL_GEOMETRY_SHADER)
+    glShaderSource(geometry_shader, geometry_shader_source)
+    glCompileShader(geometry_shader)
+    glAttachShader(normal_view_program, geometry_shader)
+
+    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER)
+    glShaderSource(fragment_shader, fragment_shader_source)
+    glCompileShader(fragment_shader)
+    glAttachShader(normal_view_program, fragment_shader)
+
+    glLinkProgram(normal_view_program)
+
+    print(f'Normal Program log: {glGetProgramInfoLog(normal_view_program)}')
+    print(f'Vertex Shader log: {glGetShaderInfoLog(vertex_shader)}')
+    print(f'Geometry Shader log: {glGetShaderInfoLog(geometry_shader)}')
+    print(f'Fragment Shader log: {glGetShaderInfoLog(fragment_shader)}')
+
+    glUseProgram(normal_view_program) # NOTE: this line will fail if shaders do not compile
+
+    # uniforms
+    global normal_proj_loc, normal_modelview_loc
+
+    normal_proj_loc = glGetUniformLocation(normal_view_program, 'projectionMatrix')
+    normal_modelview_loc = glGetUniformLocation(normal_view_program, 'modelviewMatrix')
+
+    # pass uniform locations to rendered object parent class
+    RenderedObject.normal_proj_loc = normal_proj_loc
+    RenderedObject.normal_modelview_loc = normal_modelview_loc
+
     # construct cubes
-    global original_cube, new_cube
+    global original_cube, new_cube, single_color_cube
     original_cube = Cube(colors)
     new_cube = Cube(old_colors)
+    single_color_cube = Cube(single_color)
 
     # construct cylinder
-    global cylinder
-    cylinder = Cylinder(6, 2)
+    # global cylinder
+    # cylinder = Cylinder(6, 2)
 
     # enable primitive restart 
     #   necessary for objects with multiple geometries in one VAO
@@ -167,16 +269,17 @@ def init():
 
 def position_objects():
     # TODO: determine why objects are moving away from one another
-    original_cube.translate(1, 0, 0)
+    new_cube.translate(3, 0, 0)
 
-    new_cube.translate(0, 0, -3)
-    new_cube.rotate_around_y(30)
+    original_cube.translate(0, 0, -3)
+    original_cube.rotate_around_y(30)
 
 
 # Callback function used to display the scene
 def display():
     glClearColor(0.0, 0.0, 0.0, 0.0)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    glClear(GL_COLOR_BUFFER_BIT)
+    glClear(GL_DEPTH_BUFFER_BIT)
 
     # place camera
     # NOTE: placing the camera resets all matrices to identity
@@ -185,6 +288,15 @@ def display():
     camera.update_view_matrix()
 
 
+    # LIGHT POSITION UPDATE
+    # TODO: need to make lights have the same transformation abilities as rendered objects
+    glUseProgram(main_program)
+    world_pos = np.array([0.0, 5.0, 0.0, 1.0], dtype='float32')
+    modelview_mat = np.array(glGetFloatv(GL_MODELVIEW_MATRIX), dtype='float32')
+    light_0.position = (*(list(map(lambda x : x.item(), world_pos @ modelview_mat)))[:3],)
+    # print(light_0.position)
+    light_0.assign_uniform_values()
+
     # cube 1
     # glTranslatef(-3.0, 0.0, 0.0)
     # glRotatef(global_rotation, 0.0, 0.0, 1.0)
@@ -192,11 +304,18 @@ def display():
 
     # # transform cube (please work!)
     # original_cube.translate(1, 0, 0) # does same thing as holding a (left)
+
+    # glRotatef(global_rotation, 0.0, 0.0, 1.0)
+    # glRotatef(global_rotation, 0.0, 1.0, 0.0)
+    single_color_cube.draw_object()
+    glUseProgram(normal_view_program)
+    single_color_cube.draw_normals()
     
     # cube 2
     # glRotatef(-global_rotation, 0.0, 0.0, 1.0)
     # glTranslatef(6.0, 0.0, 0.0)
     # glRotatef(global_rotation, 0.0, 0.0, 1.0)
+    glUseProgram(main_program)
     new_cube.draw_object()
 
     # return to zero (not necessary)

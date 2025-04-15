@@ -16,9 +16,10 @@ out VS_OUT {
 void main() 
 {
     gl_Position = projectionMatrix * (modelviewMatrix * position);
-    vs_out.vertPosition = modelviewMatrix * position;
-    vs_out.vertColor = color;
+    vs_out.vertPosition = gl_Position;
 
+    vs_out.vertColor = color;
+    
     mat3 normalMatrix = mat3(transpose(inverse(modelviewMatrix)));
     vs_out.vertNormal = normalize(normalMatrix * normal);
 }

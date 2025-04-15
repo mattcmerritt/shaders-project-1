@@ -6,46 +6,11 @@ from camera import *
 class RenderedObject:
     proj_loc = None
     modelview_loc = None
+    normal_proj_loc = None
+    normal_modelview_loc = None
 
     def __init__(self, model_matrix=np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]], dtype='float32')):
         self.model_matrix = model_matrix
-
-    # this method allows for fetching the current transformation 
-    #   matrices at the time an object is rendered.
-    @staticmethod
-    def update_matrices(modelview_matrix):
-        # TODO: this should be handled in a parent class
-        # access current transformation matrices
-
-        # transformations go here
-        # TODO: remove both? or use new ones instead
-        # proj_mat = glGetFloatv(GL_PROJECTION_MATRIX)
-        # modelview_mat = glGetFloatv(GL_MODELVIEW_MATRIX)
-
-        # print(f'proj: {proj_mat}')
-        # print(f'mdvw: {modelview_mat}')
-
-        # flatten the matrices to arrays
-        # flat_proj_mat = np.array(proj_mat).flatten()
-        # flat_modelview_mat = np.array(modelview_mat).flatten()
-        flat_proj_mat = np.array(Camera.instance.projection_matrix).flatten()
-        flat_modelview_mat = np.array(modelview_matrix).flatten()
-
-        # load matrix values into uniforms for shader
-        glUniformMatrix4fv(RenderedObject.proj_loc, 1, GL_FALSE, flat_proj_mat)
-        glUniformMatrix4fv(RenderedObject.modelview_loc, 1, GL_FALSE, flat_modelview_mat)
-
-    def draw_object(self): 
-        # TODO: make camera static
-        # calc modelview matrix using model and view matrices
-        # print(type(Camera.instance))
-        modelview_matrix = self.model_matrix @ Camera.instance.view_matrix
-
-        # fetch most recent matrices for shaders
-        RenderedObject.update_matrices(modelview_matrix)
-
-        # additional functionality will be handled by child classes
-        pass
 
     # TODO: transpose all
     def translate(self, x, y, z):
@@ -102,3 +67,53 @@ class RenderedObject:
     def apply_transform(self, transformation_matrix=np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]], dtype='float32')):
         # transformation_matrix = np.transpose(transformation_matrix)
         self.model_matrix = transformation_matrix @ self.model_matrix
+
+    # this method allows for fetching the current transformation 
+    #   matrices at the time an object is rendered.
+    @staticmethod
+    def update_matrices(modelview_matrix):
+        flat_proj_mat = np.array(Camera.instance.projection_matrix).flatten()
+        flat_modelview_mat = np.array(modelview_matrix).flatten()
+
+        # load matrix values into uniforms for shader
+        glUniformMatrix4fv(RenderedObject.proj_loc, 1, GL_FALSE, flat_proj_mat)
+        glUniformMatrix4fv(RenderedObject.modelview_loc, 1, GL_FALSE, flat_modelview_mat)
+
+    def draw_object(self): 
+        modelview_matrix = self.model_matrix @ Camera.instance.view_matrix
+
+        # fetch most recent matrices for shaders
+        RenderedObject.update_matrices(modelview_matrix)
+
+        # additional functionality will be handled by child classes
+        pass
+
+    # this method allows for fetching the current transformation 
+    #   matrices at the time an object is rendered.
+    # configured to work with a different program's uniform locations
+    @staticmethod
+    def update_normal_matrices(modelview_matrix):
+        # # TODO: this should be handled in a parent class
+        # # access current transformation matrices
+        # proj_mat = glGetFloatv(GL_PROJECTION_MATRIX)
+        # modelview_mat = glGetFloatv(GL_MODELVIEW_MATRIX)
+
+        # # flatten the matrices to arrays
+        # flat_proj_mat = np.array(proj_mat).flatten()
+        # flat_modelview_mat = np.array(modelview_mat).flatten()
+
+        flat_proj_mat = np.array(Camera.instance.projection_matrix).flatten()
+        flat_modelview_mat = np.array(modelview_matrix).flatten()
+
+        # load matrix values into uniforms for shader
+        glUniformMatrix4fv(RenderedObject.normal_proj_loc, 1, GL_FALSE, flat_proj_mat)
+        glUniformMatrix4fv(RenderedObject.normal_modelview_loc, 1, GL_FALSE, flat_modelview_mat)
+
+    def draw_normals(self):
+        # fetch most recent matrices for shaders
+        modelview_matrix = self.model_matrix @ Camera.instance.view_matrix
+        RenderedObject.update_normal_matrices(modelview_matrix)
+
+        # additional functionality will be handled by child classes
+        # however, they should all call use GL_POINTS as the draw mode
+        pass

@@ -20,18 +20,55 @@ class Cylinder(RenderedObject):
         glBindVertexArray(self.vao)
 
         # generate the vertices
+        #   this is done in two steps: the outer curved surface, and the caps on the ends
+        #   each will have different normals
+        
+        # generating the curved surface
+        curve_vertex_position_list = []
+        curve_vertex_normals_list = []
+
         step_around = 2 * math.pi / slices
         step_out = 1 / stacks
-        vertex_list = []
+        
         for stack_index in range(stacks + 1):
             for slice_index in range(slices):
                 theta = 2 * math.pi / slices * slice_index
-                vertex_list.append(math.cos(theta))
-                vertex_list.append(math.sin(theta))
-                vertex_list.append(stack_index * step_out)
+                curve_vertex_position_list.append(math.cos(theta))
+                curve_vertex_position_list.append(math.sin(theta))
+                curve_vertex_position_list.append(stack_index * step_out)
+
+                # the normal should just be the point on the unit circle, with no z-component
+                curve_vertex_normals_list.append(math.cos(theta))
+                curve_vertex_normals_list.append(math.cos(theta))
+                curve_vertex_normals_list.append(0.0)
+
+        # generating the caps
+        start_cap_vertex_position_list = []
+        start_cap_vertex_normal_list = []
+        end_cap_vertex_position_list = []
+        end_cap_vertex_normal_list = []
+
+        for slice_index in range(slices):
+            theta = 2 * math.pi / slices * slice_index
+            # start cap (at the back)
+            start_cap_vertex_position_list.append(math.cos(theta))
+            start_cap_vertex_position_list.append(math.sin(theta))
+            start_cap_vertex_position_list.append(0.0)
+            start_cap_vertex_normal_list.append(0.0)
+            start_cap_vertex_normal_list.append(0.0)
+            start_cap_vertex_normal_list.append(1.0)
+
+            # end cap (at the front)
+            end_cap_vertex_position_list.append(math.cos(theta))
+            end_cap_vertex_position_list.append(math.sin(theta))
+            end_cap_vertex_position_list.append(0.0)
+            end_cap_vertex_normal_list.append(0.0)
+            end_cap_vertex_normal_list.append(0.0)
+            end_cap_vertex_normal_list.append(-1.0)
 
         # create numpy array with proper types for use with VBO
-        vertices = np.array(vertex_list, dtype='float32')
+        vertices = np.array([*curve_vertex_position_list, *start_cap_vertex_position_list, *end_cap_vertex_position_list], dtype='float32')
+        vertex_normals = np.array([*curve_vertex_normals_list, *start_cap_vertex_normals_list, *end_cap_vertex_normals_list], dtype='float32')
 
         # generate the colors for each vertex
         #   currently, it will be a random color
