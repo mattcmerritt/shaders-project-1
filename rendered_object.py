@@ -2,6 +2,7 @@ import numpy as np
 from OpenGL.GL import *
 import math
 from camera import *
+from light import *
 
 class RenderedObject:
     proj_loc = None
@@ -84,6 +85,9 @@ class RenderedObject:
 
         # fetch most recent matrices for shaders
         RenderedObject.update_matrices(modelview_matrix)
+
+        for light in Light.all_lights:
+            light.assign_uniform_values(modelview_matrix)
 
         # additional functionality will be handled by child classes
         pass

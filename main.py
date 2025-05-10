@@ -23,7 +23,7 @@ from light import Light
 from material import Material
 
 camera_angle = 60.0
-camera_start_position = Point(0.0, 0.0, 5.0)
+camera_start_position = Point(0.0, 0.0, 8.0)
 window_dimensions = (640, 640)  # A tuple for the window dimensions
 name = '3D Color Test'
 
@@ -177,7 +177,7 @@ def init():
 
     # uniforms for lighting (handled by class)
     global light_0
-    light_0 = Light(0, main_program, ambient=(0.2, 0.2, 0.2), position=(1.0, 0.0, 0.0))
+    light_0 = Light(0, main_program, ambient=(0.2, 0.2, 0.2), position=(30.0, 0.0, 0.0), is_local=True)
     # TODO: add a place light function to move the light
     # light_1 = Light(1, main_program, color=(0.0, 0.0, 1.0), ambient=(0.2, 0.2, 0.2), position=(0.0, 0.0, 3.0))
 
@@ -247,8 +247,8 @@ def init():
 
     # construct cubes
     global original_cube, new_cube, single_color_cube
-    original_cube = Cube(colors)
-    new_cube = Cube(old_colors)
+    original_cube = Cube(single_color)
+    new_cube = Cube(single_color)
     single_color_cube = Cube(single_color)
 
     # construct cylinder
@@ -269,10 +269,11 @@ def init():
 
 def position_objects():
     # TODO: determine why objects are moving away from one another
-    new_cube.translate(3, 0, 0)
+    new_cube.translate(2, 0, 0)
+    single_color_cube.translate(-2, 0, 0)
 
-    original_cube.translate(0, 0, -3)
-    original_cube.rotate_around_y(30)
+    original_cube.translate(0, 0, -10)
+    # original_cube.rotate_around_y(30)
 
 
 # Callback function used to display the scene
@@ -291,11 +292,6 @@ def display():
     # LIGHT POSITION UPDATE
     # TODO: need to make lights have the same transformation abilities as rendered objects
     glUseProgram(main_program)
-    world_pos = np.array([0.0, 5.0, 0.0, 1.0], dtype='float32')
-    modelview_mat = np.array(glGetFloatv(GL_MODELVIEW_MATRIX), dtype='float32')
-    light_0.position = (*(list(map(lambda x : x.item(), world_pos @ modelview_mat)))[:3],)
-    # print(light_0.position)
-    light_0.assign_uniform_values()
 
     # cube 1
     # glTranslatef(-3.0, 0.0, 0.0)
@@ -316,6 +312,7 @@ def display():
     # glTranslatef(6.0, 0.0, 0.0)
     # glRotatef(global_rotation, 0.0, 0.0, 1.0)
     glUseProgram(main_program)
+    new_cube.rotate_around_y(1)
     new_cube.draw_object()
 
     # return to zero (not necessary)

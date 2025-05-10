@@ -1,6 +1,9 @@
 from OpenGL.GL import *
+from camera import *
 
 class Light:
+    all_lights = []
+
     # TODO: implement in a more strategic manner
     def __init__(self, index, program, is_enabled=True, is_local=False, is_spot=False, ambient=(0.0, 0.0, 0.0), color=(1.0, 1.0, 1.0), position=(0.0, 0.0, 0.0), half_vector=(0.0, 0.0, 0.0), cone_direction=(0.0, 0.0, 0.0), spot_cos_cutoff=0, spot_exponent=0, constant_attenuation=1, linear_attenuation=0, quadratic_attenuation=0, specular_strength=0):
         self.index = index
@@ -38,16 +41,21 @@ class Light:
         self.quadratic_attenuation_loc = glGetUniformLocation(self.program, f'lights[{index}].quadraticAttenuation')
         self.specular_strength_loc = glGetUniformLocation(self.program, f'lights[{index}].specularStrength')
 
+        # TODO: check if still necessary
         # assign initial values
-        self.assign_uniform_values()
+        # self.assign_uniform_values()
 
-    def assign_uniform_values(self):
+        # add light to all lights list
+        Light.all_lights.append(self)
+
+    def assign_uniform_values(self, modelview_matrix):
         glUniform1i(self.is_enabled_loc, 1 if self.is_enabled else 0)
         glUniform1i(self.is_local_loc, 1 if self.is_local else 0)
         glUniform1i(self.is_spot_loc, 1 if self.is_spot else 0)
         glUniform3f(self.ambient_loc, *self.ambient)
         glUniform3f(self.color_loc, *self.color)
-        glUniform3f(self.position_loc, *self.position)
+        # glUniform3f(self.position_loc, *(list(map(lambda x : x.item(), (*self.position, 1.0) @ modelview_matrix)))[:3],) # transform light based on modelview # local light
+        glUniform3f(self.position_loc, *(list(map(lambda x : x.item(), (*self.position, 1.0) @ Camera.instance.view_matrix)))[:3],)
         glUniform3f(self.half_vector_loc, *self.half_vector)
         glUniform3f(self.cone_direction_loc, *self.cone_direction)
         glUniform1f(self.spot_cos_cutoff_loc, self.spot_cos_cutoff)
