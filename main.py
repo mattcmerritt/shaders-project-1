@@ -162,33 +162,21 @@ def init():
 
     # pass uniform locations to rendered object parent class
     RenderedObject.proj_loc = proj_loc
-    RenderedObject.modelview_loc = modelview_loc
-
-    # uniforms for lighting
-    # light0_enabled = glGetUniformLocation(main_program, 'lights[0].isEnabled')
-    # light0_ambient = glGetUniformLocation(main_program, 'lights[0].ambient')
-    # light0_color = glGetUniformLocation(main_program, 'lights[0].color')
-    # light0_position = glGetUniformLocation(main_program, 'lights[0].position')
-
-    # glUniform1i(light0_enabled, 1)
-    # glUniform3f(light0_ambient, 0.2, 0.2, 0.2)
-    # glUniform3f(light0_color, 1.0, 1.0, 1.0)
-    # glUniform3f(light0_position, 0.0, 3.0, 3.0)     # TODO: the light position will need to be transformed in shader
+    RenderedObject.modelview_loc = modelview_loc 
 
     # uniforms for lighting (handled by class)
+    # TODO: the light position will need to be transformed in shader (no)
     global light_0
+    # light is shining down and left (coming from top right)
+    light_position = Vector(Point(-1.0, -1.0, 0.0))
+    look_vector = Vector(Point(0.0, 0.0, -1.0))
+
     light_0 = Light(0, main_program, ambient=(0.2, 0.2, 0.2), position=(1.0, 0.0, 0.0))
     # TODO: add a place light function to move the light
     # light_1 = Light(1, main_program, color=(0.0, 0.0, 1.0), ambient=(0.2, 0.2, 0.2), position=(0.0, 0.0, 3.0))
 
     eyeDirection_loc = glGetUniformLocation(main_program, 'eyeDirection')
     glUniform3f(eyeDirection_loc, 0.0, 0.0, -1.0)
-
-    # uniforms for materials
-    # mat0_ambient = glGetUniformLocation(main_program, 'materials[0].ambient')
-    # mat0_diffuse = glGetUniformLocation(main_program, 'materials[0].diffuse')
-    # glUniform3f(mat0_ambient, 1.0, 1.0, 1.0)
-    # glUniform3f(mat0_diffuse, 1.0, 1.0, 1.0)
 
     # uniforms for materials (handled by class)
     material_0 = Material(0, main_program, shininess=100)
@@ -291,7 +279,7 @@ def display():
     # LIGHT POSITION UPDATE
     # TODO: need to make lights have the same transformation abilities as rendered objects
     glUseProgram(main_program)
-    world_pos = np.array([0.0, 5.0, 0.0, 1.0], dtype='float32')
+    world_pos = np.array([1.0, 0.0, 0.0, 1.0], dtype='float32')
     modelview_mat = np.array(glGetFloatv(GL_MODELVIEW_MATRIX), dtype='float32')
     light_0.position = (*(list(map(lambda x : x.item(), world_pos @ modelview_mat)))[:3],)
     # print(light_0.position)

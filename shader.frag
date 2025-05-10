@@ -51,56 +51,13 @@ out vec4 fragColor;
 
 void main() 
 {
-    vec3 scatteredLight = vec3(0.0);
-    vec3 reflectedLight = vec3(0.0);
+    vec3 lightDirection = lights[0].position;
 
-    // iterate over lights
-    for (int light = 0; light < lights.length(); light++) {
-        if (!lights[light].isEnabled)
-            continue;
-        
-        vec3 halfVector;
-        // TODO: this will not work properly
-        vec3 lightDirection = lights[light].position;
-        // vec3 lightDirection = vec3(1.0, 0.0, 0.0);
-        float attenuation = 1.0;
+    float diffuse = max(0.0, dot(fs_in.vertNormal, lightDirection));
+    float specular = max(0.0, dot(fs_in.vertNormal, lights[0].halfVector));
 
-        if (lights[light].isLocal) {
-            lightDirection = lightDirection - vec3(fs_in.vertPosition);
-            float lightDistance = length(lightDirection);
-            lightDirection = lightDirection / lightDistance;
-
-            attenuation = 1.0 / (lights[light].constantAttenuation + lights[light].linearAttenuation * lightDistance + lights[light].quadraticAttenuation * lightDistance * lightDistance);
-
-            if (lights[light].isSpot) {
-                float spotCos = dot(lightDirection, -lights[light].coneDirection);
-                if (spotCos < lights[light].spotCosCutoff)
-                    attenuation = 0.0;
-                else
-                    attenuation *= pow(spotCos, lights[light].spotExponent);
-            }
-
-            halfVector = normalize(lightDirection + eyeDirection);
-        }
-        else {
-            lightDirection = lightDirection - vec3(fs_in.vertPosition);
-            halfVector = lights[light].halfVector;
-        }
-
-        float diffuse = max(0.0, dot(fs_in.vertNormal, lightDirection));
-        float specular = max(0.0, dot(fs_in.vertNormal, halfVector));
-
-        if (diffuse == 0.0)
-            specular = 0.0;
-        else
-            specular = pow(specular, materials[matIndex].shininess) * lights[light].specularStrength;
-
-        scatteredLight += lights[light].ambient * materials[matIndex].ambient * attenuation + lights[light].color * materials[matIndex].diffuse * diffuse * attenuation;
-        // reflectedLight += lights[light].color * materials[matIndex].specular * specular * attenuation;
-    }
-
-    vec3 rgb = min(materials[matIndex].emission + fs_in.vertColor.rgb * scatteredLight + reflectedLight, vec3(1.0));
-    fragColor = vec4(rgb, fs_in.vertColor.a);
-
-    // fragColor = fs_in.vertColor;
+    // vec3 scatteredLight = lights[0].ambient;
+    vec3 scatteredLight = lights[0].ambient + lights[0].color * diffuse;
+    vec3 fragRGB = min(fs_in.vertColor.rgb * scatteredLight, vec3(1.0));
+    fragColor = vec4(fragRGB, fs_in.vertColor.a);
 }

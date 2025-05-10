@@ -64,6 +64,9 @@ class Camera:
         # create center
         center = Point(look_x, look_y, look_z)
 
+        # store look direction -> necessary for lighting vector calculations 
+        self.look_vector = Vector(Point(look_x, look_y, look_z))
+
         # calc F
         f = Vector(p=self.eye, q=center)
 
